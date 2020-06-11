@@ -1,29 +1,47 @@
 #' @import purrr
 #' @import stats
+#' @import future
 #' @importFrom magrittr %>%
+#' @aliases NULL
 #' @details
 #' Linear Regression with Little Bag of Bootstraps
 "_PACKAGE"
+
 
 
 ## quiets concerns of R CMD check re: the .'s that appear in pipelines
 # from https://github.com/jennybc/googlesheets/blob/master/R/googlesheets.R
 utils::globalVariables(c("."))
 
-
+#' Linear Regression with Bag of Little Bootstraps one or more cpu
+#'
+#' @param formula Bootstraped linear regression model
+#' @param data The dataset to perform blblm
+#' @param m number of observations
+#' @param B number of bootstraps
+#' @param n_cl number of clusters for parallelization
 #' @export
-blblm <- function(formula, data, m = 10, B = 5000) {
+blblm <- function(formula, data, m = 10, B = 5000, n_cl = 1) {
   data_list <- split_data(data, m)
-  estimates <- map(
-    data_list,
-    ~ lm_each_subsample(formula = formula, data = ., n = nrow(data), B = B))
+  if(n_cl == 1){
+    estimates <- map(
+      data_list,
+      ~ lm_each_subsample(formula = formula, data = ., n = nrow(data), B = B))
+  } else {
+    plan(multiprocess, workers = n_cl)
+    estimates <- future_map(
+      data_list,
+      ~ lm_each_subsample(formula = formula, data = ., n = nrow(data), B = B))
+  }
   res <- list(estimates = estimates, formula = formula)
   class(res) <- "blblm"
   invisible(res)
 }
 
-
 #' split data into m parts of approximated equal sizes
+#'
+#' @param data The data to split
+#' @param m number of parts
 split_data <- function(data, m) {
   idx <- sample.int(m, nrow(data), replace = TRUE)
   data %>% split(idx)
@@ -31,12 +49,21 @@ split_data <- function(data, m) {
 
 
 #' compute the estimates
+#'
+#' @param formula To fit the linear regression model
+#' @param data The dataset to perform formula
+#' @param n number of observations
+#' @param B number of bootstraps
 lm_each_subsample <- function(formula, data, n, B) {
   replicate(B, lm_each_boot(formula, data, n), simplify = FALSE)
 }
 
 
 #' compute the regression estimates for a blb dataset
+#'
+#' @param formula To fit the linear regression model
+#' @param data The dataset to perform formula
+#' @param n number of observations
 lm_each_boot <- function(formula, data, n) {
   freqs <- rmultinom(1, n, rep(1, nrow(data)))
   lm1(formula, data, freqs)
@@ -44,6 +71,10 @@ lm_each_boot <- function(formula, data, n) {
 
 
 #' estimate the regression estimates based on given the number of repetitions
+#'
+#' @param formula To fit the linear regression model
+#' @param data The dataset to perform formula
+#' @param freq frequency
 lm1 <- function(formula, data, freqs) {
   # drop the original closure of formula,
   # otherwise the formula will pick a wront variable from the global scope.
@@ -54,12 +85,16 @@ lm1 <- function(formula, data, freqs) {
 
 
 #' compute the coefficients from fit
+#'
+#' @param fit The fitted values
 blbcoef <- function(fit) {
   coef(fit)
 }
 
 
 #' compute sigma from fit
+#'
+#' @param fit The fitted values
 blbsigma <- function(fit) {
   p <- fit$rank
   y <- model.extract(fit$model, "response")
@@ -69,6 +104,11 @@ blbsigma <- function(fit) {
 }
 
 
+#' return coefficient estimates from blblm
+#'
+#' @param x number of observations
+#' @param ... additional arguments
+#'
 #' @export
 #' @method print blblm
 print.blblm <- function(x, ...) {
@@ -77,6 +117,12 @@ print.blblm <- function(x, ...) {
 }
 
 
+#' return sigma estimate from blblm
+#'
+#' @param object the object we want to estimate
+#' @param confidence set to true for confidence intervals, set to just estimate by default.
+#' @param level significance level for confidence interval
+#' @param ... additional arguments
 #' @export
 #' @method sigma blblm
 sigma.blblm <- function(object, confidence = FALSE, level = 0.95, ...) {

@@ -6,6 +6,15 @@
 \usage{
 lm_each_subsample(formula, data, n, B)
 }
+\arguments{
+\item{formula}{To fit the linear regression model}
+
+\item{data}{The dataset to perform formula}
+
+\item{n}{number of observations}
+
+\item{B}{number of bootstraps}
+}
 \description{
 compute the estimates
 }
