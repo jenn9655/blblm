@@ -1,5 +1,6 @@
 #' @import purrr
 #' @import stats
+#' @import furrr
 #' @import future
 #' @importFrom magrittr %>%
 #' @aliases NULL
