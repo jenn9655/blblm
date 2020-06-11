@@ -1,11 +1,12 @@
 Package: blblm
 Type: Package
-Title: What the Package Does (Title Case)
+Title: The bag of little bootstraps for linear regression model
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Author: Jennifer Wang
+Maintainer: The package maintainer <priwang@ucdavis.edu>
+Description: This package used bag of little bootstraps to perform calculations with parallelization.
+    This package also calculates linear regression model coefficients, coefficent standard errors, confidence intervals, and predictions. 
+    
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

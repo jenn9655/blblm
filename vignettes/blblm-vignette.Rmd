@@ -13,12 +13,40 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 ```
+# Introduction
+  In this final project, we are going to work on bag of little bootstraps algorithm. This package has a implemented the bag of little bootstraps for linear regression model. My goal is to improve this package to various ways. 
+
+  First of all, in the current implementation there is only one CPU is used in the algorithm. I used `future_map` in the `furrr` library and made it possible to use more than one CPUs. The users can decide if they want to use parallelization by specifying `n_cl`.
+  Next, I added some descriptions for the functions. I also added test for `blblm`.
 
 ```{r setup}
 library(blblm)
 ```
 
 ```{r}
-
+blblm <- function(formula, data, m = 10, B = 5000, n_cl = 1) {
+  data_list <- split_data(data, m)
+  if(n_cl == 1){
+    estimates <- map(
+      data_list,
+      ~ lm_each_subsample(formula = formula, data = ., n = nrow(data), B = B))
+  } else {
+    plan(multiprocess, workers = n_cl)
+    estimates <- future_map(
+      data_list,
+      ~ lm_each_subsample(formula = formula, data = ., n = nrow(data), B = B))
+  }
+  res <- list(estimates = estimates, formula = formula)
+  class(res) <- "blblm"
+  invisible(res)
+}
 ```
+
+Here I wrote improved the original `blblm` to make it capabel with parallelization. 
+`formula` is the formula we want to specify the linear regression
+`data` is the dataset we are using to perform blblm
+`m` is the number of subsamples(observations) to split the data
+`B` is the number of bootstraps
+`n_cl` is the number of clusters(cores) we use, if `n_cl` is greater than 1, then parallelization is used.
+
 
